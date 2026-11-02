@@ -1,0 +1,12 @@
+﻿.env
+.env.*
+!.env.example
+env.ps1
+requests.http
+http-client.private.env.json
+*.exe
+/tmp
+/bin
+.idea
+.vscode/*
+!.vscode/extensions.json
