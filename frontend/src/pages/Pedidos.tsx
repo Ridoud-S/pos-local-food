@@ -11,23 +11,23 @@ export default function Pedidos() {
   return (
     <div className="flex h-full flex-col">
       {/* Page Header */}
-      <div className="flex items-center justify-between border-b border-border/70 px-5 py-4 bg-card/40 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <ClipboardList className="size-5" />
+      <div className="flex items-center justify-between border-b border-border/70 px-3 sm:px-5 py-2.5 sm:py-3.5 bg-card/40 backdrop-blur-sm">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <ClipboardList className="size-4.5 sm:size-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-heading text-xl font-bold tracking-tight text-foreground">
+              <h1 className="font-heading text-lg sm:text-xl font-bold tracking-tight text-foreground">
                 Pedidos
               </h1>
               {n > 0 && (
-                <Badge variant="default" className="font-bold tabular-nums">
+                <Badge variant="default" className="font-bold tabular-nums text-xs">
                   {n}
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
               Pedidos activos en el local
             </p>
           </div>
@@ -36,13 +36,13 @@ export default function Pedidos() {
         <Button
           variant="ghost"
           size="icon"
-          className="size-11 rounded-xl text-muted-foreground hover:text-foreground"
+          className="size-9 sm:size-10 rounded-xl text-muted-foreground hover:text-foreground"
           aria-label="Actualizar lista de pedidos"
           title="Actualizar pedidos"
           disabled={isLoading}
           onClick={() => refetch()}
         >
-          <RefreshCw className={`size-4.5 ${isFetching ? "animate-spin text-primary" : ""}`} />
+          <RefreshCw className={`size-4 ${isFetching ? "animate-spin text-primary" : ""}`} />
         </Button>
       </div>
 

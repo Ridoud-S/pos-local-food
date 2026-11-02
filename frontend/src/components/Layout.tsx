@@ -23,11 +23,11 @@ export default function Layout() {
   const activos = data?.length ?? 0
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground select-none">
+    <div className="flex h-dvh w-screen overflow-hidden bg-background text-foreground select-none">
       {/* Sidebar for Desktop / Wide screens (>= lg) */}
-      <aside className="hidden lg:flex w-64 flex-col border-r border-border/80 bg-card/60 backdrop-blur-md">
+      <aside className="hidden lg:flex w-60 xl:w-64 flex-col border-r border-border/80 bg-card/60 backdrop-blur-md">
         {/* Brand Header */}
-        <div className="flex h-20 items-center gap-3 border-b border-border/60 px-6">
+        <div className="flex h-16 xl:h-18 items-center gap-3 border-b border-border/60 px-5">
           <div className="flex size-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#E6C75A] to-[#B8902A] text-[#0B0B0C] shadow-md shadow-[#D4AF37]/20">
             <Sparkles className="size-6" />
           </div>
@@ -50,7 +50,7 @@ export default function Layout() {
               end={end}
               className={({ isActive }) =>
                 cn(
-                  "group relative flex h-14 items-center gap-3.5 rounded-xl px-4 text-base font-medium transition-all duration-150 active:scale-[0.98]",
+                  "group relative flex h-11 xl:h-12 items-center gap-3.5 rounded-xl px-4 text-sm font-medium transition-all duration-150 active:scale-[0.98]",
                   isActive
                     ? "bg-primary text-primary-foreground font-semibold shadow-sm shadow-primary/20"
                     : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
@@ -107,7 +107,7 @@ export default function Layout() {
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top Header for Mobile/Tablet (< lg) */}
-        <header className="flex lg:hidden h-16 items-center justify-between border-b border-border/70 bg-card/80 px-4 backdrop-blur-md">
+        <header className="flex lg:hidden h-14 items-center justify-between border-b border-border/70 bg-card/80 px-4 backdrop-blur-md">
           <div className="flex items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#E6C75A] to-[#B8902A] text-[#0B0B0C]">
               <Sparkles className="size-4.5" />
@@ -138,7 +138,7 @@ export default function Layout() {
         {/* Main Viewport */}
         <main
           key={location.pathname}
-          className="animate-page-enter min-h-0 flex-1 overflow-auto pb-20 lg:pb-0"
+          className="animate-page-enter min-h-0 flex-1 overflow-auto pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0"
         >
           <Outlet />
         </main>
