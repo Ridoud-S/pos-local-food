@@ -4,10 +4,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { useLogout } from "@/auth"
-import { usePorCobrar } from "@/lib/queries"
+import { usePedidosActivos } from "@/lib/queries"
 import { cn } from "@/lib/utils"
 
-export const BUSINESS_NAME = "Hamburguesas"
+export const BUSINESS_NAME = "Alex Snacks"
 
 const links = [
   { to: "/", label: "Caja", icon: ReceiptText, end: true },
@@ -19,8 +19,8 @@ export default function Layout() {
   const logout = useLogout()
   const navigate = useNavigate()
   const location = useLocation()
-  const { data } = usePorCobrar()
-  const pendientes = data?.length ?? 0
+  const { data } = usePedidosActivos()
+  const activos = data?.length ?? 0
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground select-none">
@@ -66,7 +66,7 @@ export default function Layout() {
                     )}
                   />
                   <span className="flex-1">{label}</span>
-                  {to === "/pedidos" && pendientes > 0 && (
+                  {to === "/pedidos" && activos > 0 && (
                     <Badge
                       variant={isActive ? "secondary" : "default"}
                       className={cn(
@@ -76,7 +76,7 @@ export default function Layout() {
                           : "bg-primary text-primary-foreground"
                       )}
                     >
-                      {pendientes}
+                      {activos}
                     </Badge>
                   )}
                 </>
@@ -167,9 +167,9 @@ export default function Layout() {
                 <>
                   <div className="relative">
                     <Icon className={cn("size-6", isActive && "stroke-[2.5px]")} />
-                    {to === "/pedidos" && pendientes > 0 && (
+                    {to === "/pedidos" && activos > 0 && (
                       <span className="absolute -top-1.5 -right-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground shadow-xs">
-                        {pendientes}
+                        {activos}
                       </span>
                     )}
                   </div>

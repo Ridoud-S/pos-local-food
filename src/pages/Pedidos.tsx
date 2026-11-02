@@ -2,10 +2,10 @@ import { ClipboardList, RefreshCw } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import PorCobrar from "@/components/PorCobrar"
-import { usePorCobrar } from "@/lib/queries"
+import { usePedidosActivos } from "@/lib/queries"
 
 export default function Pedidos() {
-  const { data, isLoading, isFetching, refetch } = usePorCobrar()
+  const { data, isLoading, isFetching, refetch } = usePedidosActivos()
   const n = data?.length ?? 0
 
   return (
@@ -19,7 +19,7 @@ export default function Pedidos() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-heading text-xl font-bold tracking-tight text-foreground">
-                Pedidos por cobrar
+                Pedidos
               </h1>
               {n > 0 && (
                 <Badge variant="default" className="font-bold tabular-nums">
@@ -28,7 +28,7 @@ export default function Pedidos() {
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Cuentas abiertas pendientes de pago en caja
+              Pedidos activos en el local
             </p>
           </div>
         </div>
