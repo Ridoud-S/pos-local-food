@@ -1,0 +1,7 @@
+.git
+.idea
+env.ps1
+requests.http
+.env*
+frontend/node_modules
+frontend/dist
