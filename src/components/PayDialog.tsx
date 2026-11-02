@@ -10,8 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { api } from "@/lib/api"
+import { api, ApiError } from "@/lib/api"
 import { pesos } from "@/lib/format"
+import type { Orden } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 type Metodo = "efectivo" | "transferencia" | "tarjeta"
@@ -35,6 +36,11 @@ export default function PayDialog({ orden, onClose }: Props) {
   const cambio = recibidoC - orden.total
   const alcanza = metodo !== "efectivo" || recibidoC >= orden.total
 
+  function cerrar() {
+    qc.invalidateQueries({ queryKey: ["orders"] })
+    onClose()
+  }
+
   const pagar = useMutation({
     mutationFn: () =>
       api<Resp>(`/orders/${orden.id}/pagar`, {
@@ -46,9 +52,18 @@ export default function PayDialog({ orden, onClose }: Props) {
       }),
     onSuccess: (r) => {
       setCambioFinal(r.cambio_centavos)
+      qc.setQueriesData<Orden[]>({ queryKey: ["orders"] }, (old) =>
+        Array.isArray(old)
+          ? old.map((o) => (o.id === orden.id ? { ...o, estado_pago: "pagado" } : o))
+          : old,
+      )
       qc.invalidateQueries({ queryKey: ["orders"] })
+      qc.invalidateQueries({ queryKey: ["stats"] })
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => {
+      toast.error(e.message)
+      if (e instanceof ApiError && e.status === 409) cerrar() // ya estaba pagada o cancelada
+    },
   })
 
   function handleKeypad(digit: string) {
@@ -77,7 +92,7 @@ export default function PayDialog({ orden, onClose }: Props) {
   }
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && cerrar()}>
       <DialogContent className="max-w-md p-6 sm:max-w-lg">
         {cambioFinal !== null ? (
           /* Payment completed screen with animated change */
@@ -104,7 +119,7 @@ export default function PayDialog({ orden, onClose }: Props) {
             <Button
               size="lg"
               className="h-14 w-full text-base font-bold shadow-md shadow-primary/20"
-              onClick={onClose}
+              onClick={cerrar}
             >
               Listo · Finalizar
             </Button>
@@ -241,7 +256,7 @@ export default function PayDialog({ orden, onClose }: Props) {
               </div>
             )}
 
-            {/* Confirm Payment Button */}
+            {/* Confirm Payment Button - Double tap protection via disabled and loading */}
             <Button
               size="lg"
               className="h-14 w-full text-base font-bold shadow-md shadow-primary/25 mt-2"

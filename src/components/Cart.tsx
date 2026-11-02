@@ -33,9 +33,12 @@ export default function Cart() {
     },
     onSuccess: (r, cobrarYa) => {
       clear()
-      qc.invalidateQueries({ queryKey: ["orders"] })
-      if (cobrarYa) setCobrar({ id: r.id, total: r.total_centavos })
-      else toast.success(`Pedido #${r.id} creado con éxito`)
+      if (cobrarYa) {
+        setCobrar({ id: r.id, total: r.total_centavos })
+      } else {
+        qc.invalidateQueries({ queryKey: ["orders"] })
+        toast.success(`Pedido #${r.id} creado`)
+      }
     },
     onError: (e) => toast.error(e.message),
   })
