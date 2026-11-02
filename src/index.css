@@ -107,12 +107,24 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    font-size: 14px;
+    @apply font-sans;
+  }
+  @media (min-width: 768px) {
+    html {
+      font-size: 15px;
+    }
+  }
+  @media (min-width: 1280px) {
+    html {
+      font-size: 14px;
+    }
+  }
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-foreground;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  }
-  html {
-    @apply font-sans;
+    min-height: 100dvh;
   }
 }
 

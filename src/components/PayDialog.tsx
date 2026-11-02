@@ -93,32 +93,32 @@ export default function PayDialog({ orden, onClose }: Props) {
 
   return (
     <Dialog open onOpenChange={(open) => !open && cerrar()}>
-      <DialogContent className="max-w-md p-6 sm:max-w-lg">
+      <DialogContent className="w-full max-w-[calc(100%-1.5rem)] p-4 sm:p-5 sm:max-w-md max-h-[92dvh] overflow-y-auto gap-3">
         {cambioFinal !== null ? (
           /* Payment completed screen with animated change */
-          <div className="animate-page-enter space-y-6 py-6 text-center">
-            <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-success/15 text-success">
-              <CheckCircle2 className="size-12 animate-check stroke-[2.2]" />
+          <div className="animate-page-enter space-y-4 py-3 text-center">
+            <div className="mx-auto flex size-14 sm:size-16 items-center justify-center rounded-full bg-success/15 text-success">
+              <CheckCircle2 className="size-8 sm:size-10 animate-check stroke-[2.2]" />
             </div>
 
-            <DialogHeader className="gap-1">
-              <DialogTitle className="font-heading text-2xl font-bold tracking-tight text-foreground text-center">
+            <DialogHeader className="gap-0.5">
+              <DialogTitle className="font-heading text-xl sm:text-2xl font-bold tracking-tight text-foreground text-center">
                 Pedido #{orden.id} Pagado
               </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground text-center">
+              <DialogDescription className="text-xs sm:text-sm text-muted-foreground text-center">
                 Monto de cambio a entregar al cliente
               </DialogDescription>
             </DialogHeader>
 
-            <div className="py-2">
-              <p className="font-heading text-6xl font-extrabold text-success tabular-nums tracking-tight animate-pulse-subtle">
+            <div className="py-1">
+              <p className="font-heading text-4xl sm:text-5xl font-extrabold text-success tabular-nums tracking-tight animate-pulse-subtle">
                 {pesos(cambioFinal)}
               </p>
             </div>
 
             <Button
               size="lg"
-              className="h-14 w-full text-base font-bold shadow-md shadow-primary/20"
+              className="h-11 sm:h-12 w-full text-sm sm:text-base font-bold shadow-md shadow-primary/20"
               onClick={cerrar}
             >
               Listo · Finalizar
@@ -126,13 +126,13 @@ export default function PayDialog({ orden, onClose }: Props) {
           </div>
         ) : (
           /* Payment input screen */
-          <div className="space-y-5">
-            <DialogHeader className="gap-1">
+          <div className="space-y-3.5">
+            <DialogHeader className="gap-0.5">
               <div className="flex items-center justify-between">
-                <DialogTitle className="font-heading text-2xl font-bold tracking-tight text-foreground">
+                <DialogTitle className="font-heading text-lg sm:text-xl font-bold tracking-tight text-foreground">
                   Cobrar Pedido #{orden.id}
                 </DialogTitle>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                   Por pagar
                 </span>
               </div>
@@ -142,11 +142,11 @@ export default function PayDialog({ orden, onClose }: Props) {
             </DialogHeader>
 
             {/* Total Display */}
-            <div className="rounded-2xl border border-primary/25 bg-primary/5 py-4 px-5 text-center">
-              <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+            <div className="rounded-xl border border-primary/25 bg-primary/5 py-2.5 px-4 text-center">
+              <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
                 Total de la cuenta
               </span>
-              <p className="font-heading text-5xl font-extrabold text-foreground tabular-nums tracking-tight mt-0.5">
+              <p className="font-heading text-3xl sm:text-4xl font-extrabold text-foreground tabular-nums tracking-tight">
                 {pesos(orden.total)}
               </p>
             </div>
@@ -162,14 +162,14 @@ export default function PayDialog({ orden, onClose }: Props) {
                     type="button"
                     onClick={() => setMetodo(m.id)}
                     className={cn(
-                      "flex h-14 flex-col items-center justify-center gap-1 rounded-2xl border px-2 text-xs font-semibold transition-all duration-150 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                      "flex h-11 sm:h-12 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 text-xs font-semibold transition-all duration-150 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-primary",
                       isActive
-                        ? "border-primary bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 scale-100"
+                        ? "border-primary bg-primary text-primary-foreground font-bold shadow-sm shadow-primary/20 scale-100"
                         : "border-border/80 bg-card hover:bg-muted text-foreground"
                     )}
                   >
-                    <Icon className="size-5" />
-                    <span>{m.label}</span>
+                    <Icon className="size-4" />
+                    <span className="text-[11px]">{m.label}</span>
                   </button>
                 )
               })}
@@ -177,23 +177,34 @@ export default function PayDialog({ orden, onClose }: Props) {
 
             {/* Cash Input Controls */}
             {metodo === "efectivo" && (
-              <div className="space-y-3.5 pt-1">
-                {/* Received Cash Display */}
-                <div className="flex items-center justify-between rounded-xl border border-input bg-card px-4 py-2.5">
-                  <span className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+              <div className="space-y-2.5">
+                {/* Received Cash Input */}
+                <div className="flex items-center justify-between rounded-xl border border-input bg-card px-3 py-1.5 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+                  <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
                     Recibido
                   </span>
-                  <span className="font-heading text-3xl font-bold tabular-nums text-foreground">
-                    ${recibido || "0"}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-heading text-lg font-bold text-muted-foreground">$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={recibido}
+                      placeholder="0"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.]/g, "")
+                        setRecibido(val)
+                      }}
+                      className="w-24 sm:w-32 bg-transparent text-right font-heading text-xl sm:text-2xl font-bold tabular-nums text-foreground outline-none"
+                    />
+                  </div>
                 </div>
 
                 {/* Quick Bill Shortcuts */}
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5">
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-12 text-xs font-bold px-1"
+                    className="h-9 text-xs font-bold px-1"
                     onClick={() => setRecibido(String(orden.total / 100))}
                   >
                     Exacto
@@ -203,7 +214,7 @@ export default function PayDialog({ orden, onClose }: Props) {
                       key={b}
                       type="button"
                       variant="outline"
-                      className="h-12 text-xs font-bold px-1"
+                      className="h-9 text-xs font-bold px-1"
                       onClick={() => setRecibido(String(b))}
                     >
                       ${b}
@@ -211,15 +222,15 @@ export default function PayDialog({ orden, onClose }: Props) {
                   ))}
                 </div>
 
-                {/* On-Screen Numeric Keypad (56px touch target buttons) */}
-                <div className="grid grid-cols-3 gap-2 pt-1">
+                {/* On-Screen Numeric Keypad: shown on tablet/desktop (md+) */}
+                <div className="hidden md:grid grid-cols-3 gap-1.5 pt-1">
                   {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0"].map(
                     (digit) => (
                       <button
                         key={digit}
                         type="button"
                         onClick={() => handleKeypad(digit)}
-                        className="flex h-14 items-center justify-center rounded-xl border border-border/70 bg-card/80 text-xl font-heading font-bold text-foreground transition-all hover:bg-muted/70 active:scale-95 active:bg-primary/20"
+                        className="flex h-11 items-center justify-center rounded-xl border border-border/70 bg-card/80 text-lg font-heading font-bold text-foreground transition-all hover:bg-muted/70 active:scale-95 active:bg-primary/20"
                       >
                         {digit}
                       </button>
@@ -229,9 +240,9 @@ export default function PayDialog({ orden, onClose }: Props) {
                     type="button"
                     aria-label="Borrar último dígito"
                     onClick={() => handleKeypad("backspace")}
-                    className="flex h-14 items-center justify-center rounded-xl border border-border/70 bg-card/80 text-foreground transition-all hover:bg-destructive/15 hover:text-destructive active:scale-95"
+                    className="flex h-11 items-center justify-center rounded-xl border border-border/70 bg-card/80 text-foreground transition-all hover:bg-destructive/15 hover:text-destructive active:scale-95"
                   >
-                    <Delete className="size-6" />
+                    <Delete className="size-5" />
                   </button>
                 </div>
 
@@ -239,16 +250,16 @@ export default function PayDialog({ orden, onClose }: Props) {
                 {recibidoC > 0 && (
                   <div
                     className={cn(
-                      "flex items-center justify-between rounded-2xl p-3.5 border transition-all",
+                      "flex items-center justify-between rounded-xl p-2.5 border transition-all text-xs",
                       cambio >= 0
                         ? "border-success/30 bg-success/10 text-success"
                         : "border-destructive/30 bg-destructive/10 text-destructive"
                     )}
                   >
-                    <span className="text-xs uppercase tracking-wider font-bold">
+                    <span className="uppercase tracking-wider font-bold">
                       {cambio >= 0 ? "Cambio a entregar" : "Monto faltante"}
                     </span>
-                    <span className="font-heading text-2xl font-extrabold tabular-nums">
+                    <span className="font-heading text-lg font-extrabold tabular-nums">
                       {pesos(Math.abs(cambio))}
                     </span>
                   </div>
@@ -256,10 +267,10 @@ export default function PayDialog({ orden, onClose }: Props) {
               </div>
             )}
 
-            {/* Confirm Payment Button - Double tap protection via disabled and loading */}
+            {/* Confirm Payment Button */}
             <Button
               size="lg"
-              className="h-14 w-full text-base font-bold shadow-md shadow-primary/25 mt-2"
+              className="h-11 sm:h-12 w-full text-sm sm:text-base font-bold shadow-md shadow-primary/25 mt-1"
               loading={pagar.isPending}
               disabled={!alcanza || pagar.isPending}
               onClick={() => pagar.mutate()}
