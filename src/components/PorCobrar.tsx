@@ -115,8 +115,8 @@ export default function PorCobrar() {
 
   const detalle = data.find((o) => o.id === detalleId) ?? null
 
-  // Botones de acción según el estado; se usan en la tarjeta y en el detalle
-  function Acciones({ o, grande }: { o: Orden; grande?: boolean }) {
+  // Botones de acción según el estado; se llama como función (no es un componente)
+  function renderAcciones(o: Orden, grande = false) {
     const pagado = o.estado_pago === "pagado"
     const alto = grande ? "h-14 text-base" : "h-13 text-sm"
     if (pagado) {
@@ -234,9 +234,7 @@ export default function PorCobrar() {
                 </ul>
               </div>
 
-              <div className="mt-5 border-t border-border/50 pt-3">
-                <Acciones o={o} />
-              </div>
+              <div className="mt-5 border-t border-border/50 pt-3">{renderAcciones(o)}</div>
             </div>
           )
         })}
@@ -330,9 +328,7 @@ export default function PorCobrar() {
               )}
             </div>
 
-            <div className="border-t p-5">
-              <Acciones o={detalle} grande />
-            </div>
+            <div className="border-t p-5">{renderAcciones(detalle, true)}</div>
           </DialogContent>
         </Dialog>
       )}
@@ -356,7 +352,11 @@ export default function PorCobrar() {
               </DialogHeader>
             </div>
             <DialogFooter className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-2">
-              <Button variant="outline" className="h-12 font-medium" onClick={() => setCancelarId(null)}>
+              <Button
+                variant="outline"
+                className="h-12 font-medium"
+                onClick={() => setCancelarId(null)}
+              >
                 Volver
               </Button>
               <Button
