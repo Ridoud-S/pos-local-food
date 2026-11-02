@@ -16,6 +16,12 @@ export function usePorCobrar() {
         refetchInterval: 5000,
     })
 }
+export const usePedidosActivos = () =>
+    useQuery({
+        queryKey: ["orders", "activos"],
+        queryFn: () => api<Orden[]>("/orders?vista=cocina"),
+        refetchInterval: 4000,
+    })
 
 export const useStatsDias = (dias: number) =>
     useQuery({
