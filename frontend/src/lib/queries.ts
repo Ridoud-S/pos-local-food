@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
-import type { Categoria, DiaStats, Orden, TopProducto } from "@/lib/types"
+import type { Categoria, DiaStats, Orden, TopProducto, Usuario } from "@/lib/types"
 
 export function useMenu() {
     return useQuery({
@@ -16,11 +16,19 @@ export function usePorCobrar() {
         refetchInterval: 5000,
     })
 }
+
 export const usePedidosActivos = () =>
     useQuery({
         queryKey: ["orders", "activos"],
         queryFn: () => api<Orden[]>("/orders?vista=cocina"),
         refetchInterval: 4000,
+    })
+
+export const useTablero = () =>
+    useQuery({
+        queryKey: ["orders", "tablero"],
+        queryFn: () => api<Orden[]>("/orders?vista=cocina"),
+        refetchInterval: 3000,
     })
 
 export const useStatsDias = (dias: number) =>
@@ -35,4 +43,10 @@ export const useStatsTop = (dias: number) =>
         queryKey: ["stats", "top", dias],
         queryFn: () => api<TopProducto[]>(`/stats/top?dias=${dias}`),
         refetchInterval: 30_000,
+    })
+
+export const useUsuarios = () =>
+    useQuery({
+        queryKey: ["usuarios"],
+        queryFn: () => api<Usuario[]>("/admin/usuarios"),
     })

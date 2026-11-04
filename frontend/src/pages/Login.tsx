@@ -17,14 +17,20 @@ export default function Login() {
   const [usuario, setUsuario] = useState("")
   const [password, setPassword] = useState("")
 
-  if (me.data) return <Navigate to="/" replace />
+  if (me.data) {
+    const home = me.data.rol === "cocina" ? "/pedidos" : "/"
+    return <Navigate to={home} replace />
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
     login.mutate(
       { usuario: usuario.trim(), password },
       {
-        onSuccess: () => navigate("/", { replace: true }),
+        onSuccess: (userData) => {
+          const home = userData.rol === "cocina" ? "/pedidos" : "/"
+          navigate(home, { replace: true })
+        },
         onError: (err) => toast.error(err.message),
       },
     )

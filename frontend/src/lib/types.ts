@@ -1,4 +1,16 @@
-export type Me = { usuario: string; rol: string }
+export type Rol = "admin" | "caja" | "cocina"
+
+export type Me = {
+    usuario: string
+    rol: Rol
+}
+
+export type Usuario = {
+    id: number
+    usuario: string
+    rol: Rol
+    activo: boolean
+}
 
 export type Opcion = {
     id: number

@@ -1,26 +1,51 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
-import { ClipboardList, LogOut, ReceiptText, Sparkles, TrendingUp } from "lucide-react"
+import { LogOut, Receipt, ReceiptText, Sparkles, TrendingUp, Users, Utensils } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/ThemeToggle"
-import { useLogout } from "@/auth"
+import { useLogout, useMe } from "@/auth"
 import { usePedidosActivos } from "@/lib/queries"
+import type { Rol } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 export const BUSINESS_NAME = "Alex Snacks"
 
-const links = [
-  { to: "/", label: "Caja", icon: ReceiptText, end: true },
-  { to: "/pedidos", label: "Pedidos", icon: ClipboardList, end: false },
-  { to: "/resumen", label: "Resumen", icon: TrendingUp, end: false },
+type NavItem = {
+  to: string
+  label: string
+  icon: typeof ReceiptText
+  end: boolean
+  roles: Rol[]
+}
+
+const allLinks: NavItem[] = [
+  { to: "/", label: "Caja", icon: ReceiptText, end: true, roles: ["admin", "caja"] },
+  { to: "/cuentas", label: "Cuentas", icon: Receipt, end: false, roles: ["admin", "caja"] },
+  { to: "/pedidos", label: "Pedidos", icon: Utensils, end: false, roles: ["admin", "caja", "cocina"] },
+  { to: "/resumen", label: "Resumen", icon: TrendingUp, end: false, roles: ["admin"] },
+  { to: "/usuarios", label: "Usuarios", icon: Users, end: false, roles: ["admin"] },
 ]
+
+const rolNombreMap: Record<Rol, string> = {
+  admin: "Administrador",
+  caja: "Cajero",
+  cocina: "Cocina",
+}
 
 export default function Layout() {
   const logout = useLogout()
   const navigate = useNavigate()
   const location = useLocation()
+  const { data: me } = useMe()
   const { data } = usePedidosActivos()
   const activos = data?.length ?? 0
+
+  // Filtrar navegación según rol del usuario
+  const links = allLinks.filter((l) => {
+    if (!me) return false
+    if (me.rol === "admin") return true
+    return l.roles.includes(me.rol)
+  })
 
   return (
     <div className="flex h-dvh w-screen overflow-hidden bg-background text-foreground select-none">
@@ -40,6 +65,20 @@ export default function Layout() {
             </span>
           </div>
         </div>
+
+        {/* User Badge Info */}
+        {me && (
+          <div className="border-b border-border/50 px-5 py-3 bg-muted/20">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-foreground truncate max-w-[120px]">
+                @{me.usuario}
+              </span>
+              <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0 border-primary/30 text-primary">
+                {rolNombreMap[me.rol] ?? me.rol}
+              </Badge>
+            </div>
+          </div>
+        )}
 
         {/* Navigation Links */}
         <nav className="flex-1 space-y-2 p-4">
@@ -66,7 +105,7 @@ export default function Layout() {
                     )}
                   />
                   <span className="flex-1">{label}</span>
-                  {to === "/pedidos" && activos > 0 && (
+                  {to === "/cuentas" && activos > 0 && (
                     <Badge
                       variant={isActive ? "secondary" : "default"}
                       className={cn(
@@ -93,6 +132,7 @@ export default function Layout() {
             size="icon"
             className="h-12 w-12 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             aria-label="Cerrar sesión"
+            title="Cerrar sesión"
             onClick={() =>
               logout.mutate(undefined, {
                 onSuccess: () => navigate("/login", { replace: true }),
@@ -112,9 +152,16 @@ export default function Layout() {
             <div className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#E6C75A] to-[#B8902A] text-[#0B0B0C]">
               <Sparkles className="size-4.5" />
             </div>
-            <h1 className="font-heading text-lg font-bold tracking-tight text-foreground">
-              {BUSINESS_NAME}
-            </h1>
+            <div>
+              <h1 className="font-heading text-lg font-bold tracking-tight text-foreground leading-none">
+                {BUSINESS_NAME}
+              </h1>
+              {me && (
+                <span className="text-[10px] font-semibold text-primary">
+                  @{me.usuario} · {rolNombreMap[me.rol]}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-1">
@@ -124,6 +171,7 @@ export default function Layout() {
               size="icon"
               className="h-12 w-12 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               aria-label="Cerrar sesión"
+              title="Cerrar sesión"
               onClick={() =>
                 logout.mutate(undefined, {
                   onSuccess: () => navigate("/login", { replace: true }),
@@ -156,7 +204,7 @@ export default function Layout() {
               end={end}
               className={({ isActive }) =>
                 cn(
-                  "relative flex min-w-18 flex-col items-center justify-center gap-1 rounded-xl py-1.5 px-3 transition-all duration-150 active:scale-95",
+                  "relative flex min-w-16 flex-col items-center justify-center gap-1 rounded-xl py-1.5 px-2.5 transition-all duration-150 active:scale-95",
                   isActive
                     ? "text-primary font-bold"
                     : "text-muted-foreground hover:text-foreground"
@@ -167,7 +215,7 @@ export default function Layout() {
                 <>
                   <div className="relative">
                     <Icon className={cn("size-6", isActive && "stroke-[2.5px]")} />
-                    {to === "/pedidos" && activos > 0 && (
+                    {to === "/cuentas" && activos > 0 && (
                       <span className="absolute -top-1.5 -right-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-primary-foreground shadow-xs">
                         {activos}
                       </span>

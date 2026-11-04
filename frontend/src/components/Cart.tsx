@@ -428,7 +428,7 @@ export default function Cart() {
         })
       } else {
         toast.success(`Se agregó a pedido #${pedidoId}`)
-        navigate("/pedidos")
+        navigate("/cuentas")
       }
     },
     onError: (e) => toast.error(e.message),

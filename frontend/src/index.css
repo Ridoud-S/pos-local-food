@@ -188,12 +188,32 @@
   animation: progressShrink 4000ms linear forwards;
 }
 
+@keyframes goldenGlowBorder {
+  0%, 100% {
+    box-shadow: 0 0 0 2px var(--gold);
+    border-color: var(--gold);
+  }
+  50% {
+    box-shadow: 0 0 18px 4px var(--gold);
+    border-color: var(--gold-hover);
+  }
+}
+
+.animate-new-order {
+  animation: goldenGlowBorder 1.5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-page-enter,
   .animate-pulse-subtle,
   .animate-check,
-  .animate-progress-4s {
+  .animate-progress-4s,
+  .animate-new-order {
     animation: none !important;
     transform: none !important;
+  }
+  .animate-new-order {
+    box-shadow: 0 0 0 2px var(--gold) !important;
+    border-color: var(--gold) !important;
   }
 }
