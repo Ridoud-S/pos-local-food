@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeftRight, Banknote, CheckCircle2, CreditCard, Delete } from "lucide-react"
 import { toast } from "sonner"
@@ -17,7 +17,15 @@ import { cn } from "@/lib/utils"
 
 type Metodo = "efectivo" | "transferencia" | "tarjeta"
 type Resp = { cambio_centavos: number }
-type Props = { orden: { id: number; total: number }; onClose: () => void }
+type Props = {
+  orden: {
+    id: number
+    total: number
+    cliente?: string | null
+    abonado?: number
+  }
+  onClose: () => void
+}
 
 const BILLETES = [50, 100, 200, 500]
 const METODOS: { id: Metodo; label: string; icon: typeof Banknote }[] = [
@@ -36,9 +44,24 @@ export default function PayDialog({ orden, onClose }: Props) {
   const cambio = recibidoC - orden.total
   const alcanza = metodo !== "efectivo" || recibidoC >= orden.total
 
-  function cerrar() {
+  const cerrar = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["orders"] })
     onClose()
+  }, [qc, onClose])
+
+  // Auto-cierre a los 4 segundos en la pantalla de cambio
+  useEffect(() => {
+    if (cambioFinal === null) return
+    const timer = setTimeout(() => {
+      cerrar()
+    }, 4000)
+    return () => clearTimeout(timer)
+  }, [cambioFinal, cerrar])
+
+  function sumarBillete(b: number) {
+    const cur = parseFloat(recibido.replace(",", ".")) || 0
+    const nuevo = Math.round((cur + b) * 100) / 100
+    setRecibido(String(nuevo))
   }
 
   const pagar = useMutation({
@@ -54,7 +77,11 @@ export default function PayDialog({ orden, onClose }: Props) {
       setCambioFinal(r.cambio_centavos)
       qc.setQueriesData<Orden[]>({ queryKey: ["orders"] }, (old) =>
         Array.isArray(old)
-          ? old.map((o) => (o.id === orden.id ? { ...o, estado_pago: "pagado" } : o))
+          ? old.map((o) =>
+              o.id === orden.id
+                ? { ...o, estado_pago: "pagado", pendiente_centavos: 0 }
+                : o
+            )
           : old,
       )
       qc.invalidateQueries({ queryKey: ["orders"] })
@@ -95,18 +122,32 @@ export default function PayDialog({ orden, onClose }: Props) {
     <Dialog open onOpenChange={(open) => !open && cerrar()}>
       <DialogContent className="w-full max-w-[calc(100%-1.5rem)] p-4 sm:p-5 sm:max-w-md max-h-[92dvh] overflow-y-auto gap-3">
         {cambioFinal !== null ? (
-          /* Payment completed screen with animated change */
-          <div className="animate-page-enter space-y-4 py-3 text-center">
+          /* Payment completed screen with animated change, progress bar and touch-to-close */
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={cerrar}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") cerrar()
+            }}
+            className="animate-page-enter space-y-4 py-3 text-center cursor-pointer select-none outline-none"
+            aria-label="Tocar para finalizar"
+          >
+            {/* Barra de progreso fina de 4 segundos */}
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-success/20">
+              <div className="h-full bg-success rounded-full animate-progress-4s" />
+            </div>
+
             <div className="mx-auto flex size-14 sm:size-16 items-center justify-center rounded-full bg-success/15 text-success">
               <CheckCircle2 className="size-8 sm:size-10 animate-check stroke-[2.2]" />
             </div>
 
             <DialogHeader className="gap-0.5">
               <DialogTitle className="font-heading text-xl sm:text-2xl font-bold tracking-tight text-foreground text-center">
-                Pedido #{orden.id} Pagado
+                Pedido #{orden.id}{orden.cliente ? ` · ${orden.cliente}` : ""} Pagado
               </DialogTitle>
               <DialogDescription className="text-xs sm:text-sm text-muted-foreground text-center">
-                Monto de cambio a entregar al cliente
+                Monto de cambio a entregar al cliente · Toca en cualquier lugar para cerrar
               </DialogDescription>
             </DialogHeader>
 
@@ -118,8 +159,11 @@ export default function PayDialog({ orden, onClose }: Props) {
 
             <Button
               size="lg"
-              className="h-11 sm:h-12 w-full text-sm sm:text-base font-bold shadow-md shadow-primary/20"
-              onClick={cerrar}
+              className="min-h-[44px] h-11 sm:h-12 w-full text-sm sm:text-base font-bold shadow-md shadow-primary/20"
+              onClick={(e) => {
+                e.stopPropagation()
+                cerrar()
+              }}
             >
               Listo · Finalizar
             </Button>
@@ -130,12 +174,15 @@ export default function PayDialog({ orden, onClose }: Props) {
             <DialogHeader className="gap-0.5">
               <div className="flex items-center justify-between">
                 <DialogTitle className="font-heading text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                  Cobrar Pedido #{orden.id}
+                  Cobrar #{orden.id}{orden.cliente ? ` · ${orden.cliente}` : ""}
                 </DialogTitle>
                 <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                   Por pagar
                 </span>
               </div>
+              {orden.abonado !== undefined && orden.abonado > 0 && (
+                <p className="text-xs font-semibold text-primary">Resto del pedido</p>
+              )}
               <DialogDescription className="text-xs text-muted-foreground">
                 Selecciona el método de pago e ingresa el importe
               </DialogDescription>
@@ -162,7 +209,7 @@ export default function PayDialog({ orden, onClose }: Props) {
                     type="button"
                     onClick={() => setMetodo(m.id)}
                     className={cn(
-                      "flex h-11 sm:h-12 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 text-xs font-semibold transition-all duration-150 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                      "flex min-h-[44px] h-11 sm:h-12 flex-col items-center justify-center gap-0.5 rounded-xl border px-1 text-xs font-semibold transition-all duration-150 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-primary",
                       isActive
                         ? "border-primary bg-primary text-primary-foreground font-bold shadow-sm shadow-primary/20 scale-100"
                         : "border-border/80 bg-card hover:bg-muted text-foreground"
@@ -178,12 +225,12 @@ export default function PayDialog({ orden, onClose }: Props) {
             {/* Cash Input Controls */}
             {metodo === "efectivo" && (
               <div className="space-y-2.5">
-                {/* Received Cash Input */}
+                {/* Received Cash Input + Botón Borrar */}
                 <div className="flex items-center justify-between rounded-xl border border-input bg-card px-3 py-1.5 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
                   <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
                     Recibido
                   </span>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     <span className="font-heading text-lg font-bold text-muted-foreground">$</span>
                     <input
                       type="text"
@@ -194,17 +241,26 @@ export default function PayDialog({ orden, onClose }: Props) {
                         const val = e.target.value.replace(/[^0-9.]/g, "")
                         setRecibido(val)
                       }}
-                      className="w-24 sm:w-32 bg-transparent text-right font-heading text-xl sm:text-2xl font-bold tabular-nums text-foreground outline-none"
+                      className="w-20 sm:w-28 bg-transparent text-right font-heading text-xl sm:text-2xl font-bold tabular-nums text-foreground outline-none"
                     />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-xs font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setRecibido("")}
+                    >
+                      Borrar
+                    </Button>
                   </div>
                 </div>
 
-                {/* Quick Bill Shortcuts */}
+                {/* Quick Bill Shortcuts (Acumulativos) */}
                 <div className="grid grid-cols-5 gap-1.5">
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-9 text-xs font-bold px-1"
+                    className="min-h-[44px] h-11 sm:h-10 text-xs font-bold px-1"
                     onClick={() => setRecibido(String(orden.total / 100))}
                   >
                     Exacto
@@ -214,8 +270,8 @@ export default function PayDialog({ orden, onClose }: Props) {
                       key={b}
                       type="button"
                       variant="outline"
-                      className="h-9 text-xs font-bold px-1"
-                      onClick={() => setRecibido(String(b))}
+                      className="min-h-[44px] h-11 sm:h-10 text-xs font-bold px-1"
+                      onClick={() => sumarBillete(b)}
                     >
                       ${b}
                     </Button>
@@ -270,7 +326,7 @@ export default function PayDialog({ orden, onClose }: Props) {
             {/* Confirm Payment Button */}
             <Button
               size="lg"
-              className="h-11 sm:h-12 w-full text-sm sm:text-base font-bold shadow-md shadow-primary/25 mt-1"
+              className="min-h-[44px] h-11 sm:h-12 w-full text-sm sm:text-base font-bold shadow-md shadow-primary/25 mt-1"
               loading={pagar.isPending}
               disabled={!alcanza || pagar.isPending}
               onClick={() => pagar.mutate()}

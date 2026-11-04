@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   AlertTriangle,
@@ -7,6 +8,7 @@ import {
   Clock,
   MapPin,
   PackageCheck,
+  Plus,
   XCircle,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -25,6 +27,8 @@ import { api } from "@/lib/api"
 import { pesos } from "@/lib/format"
 import { usePedidosActivos } from "@/lib/queries"
 import type { Orden } from "@/lib/types"
+import { useCart } from "@/store/cart"
+import { cn } from "@/lib/utils"
 
 function formatRelativo(iso: string, ahora: number): string {
   if (!iso) return ""
@@ -39,9 +43,16 @@ const tipoLabel = (t: Orden["tipo"]) =>
   t === "domicilio" ? "Domicilio" : t === "llevar" ? "Para llevar" : "Comer aquí"
 
 export default function PorCobrar() {
+  const navigate = useNavigate()
   const qc = useQueryClient()
+  const iniciarEdicion = useCart((s) => s.iniciarEdicion)
   const { data, isLoading } = usePedidosActivos()
-  const [cobrar, setCobrar] = useState<{ id: number; total: number } | null>(null)
+  const [cobrar, setCobrar] = useState<{
+    id: number
+    total: number
+    cliente?: string | null
+    abonado?: number
+  } | null>(null)
   const [cancelarId, setCancelarId] = useState<number | null>(null)
   const [detalleId, setDetalleId] = useState<number | null>(null)
   const [ahora, setAhora] = useState(() => Date.now())
@@ -116,58 +127,104 @@ export default function PorCobrar() {
   const detalle = data.find((o) => o.id === detalleId) ?? null
 
   function renderAcciones(o: Orden, grande = false) {
-    const pagado = o.estado_pago === "pagado"
+    const pagado = o.estado_pago === "pagado" && o.pendiente_centavos === 0
+    const tieneAbono = o.abonado_centavos > 0
+    const puedeCancelar = !pagado && !tieneAbono
+    const puedeAgregar = o.estado_pago !== "cancelado" && o.estado_cocina !== "entregada"
     const alto = grande ? "h-11 sm:h-12 text-sm sm:text-base" : "h-10 text-xs sm:text-sm"
+
+    const handleAgregar = (e: React.MouseEvent) => {
+      e.stopPropagation()
+      setDetalleId(null)
+      iniciarEdicion(o.id, o.cliente_nombre)
+      navigate("/")
+    }
+
     if (pagado) {
       return (
-        <Button
-          className={`${alto} w-full gap-2 font-bold shadow-sm`}
-          loading={entregar.isPending && entregar.variables === o.id}
-          onClick={(e) => {
-            e.stopPropagation()
-            entregar.mutate(o.id)
-          }}
-        >
-          <CheckCircle2 className="size-4 sm:size-4.5" />
-          Entregado
-        </Button>
+        <div className="space-y-1.5">
+          <Button
+            className={`${alto} min-h-[44px] w-full gap-2 font-bold shadow-sm`}
+            loading={entregar.isPending && entregar.variables === o.id}
+            onClick={(e) => {
+              e.stopPropagation()
+              entregar.mutate(o.id)
+            }}
+          >
+            <CheckCircle2 className="size-4 sm:size-4.5" />
+            Entregado
+          </Button>
+          {puedeAgregar && (
+            <Button
+              variant="outline"
+              className={`${alto} min-h-[44px] w-full gap-1.5 font-medium`}
+              onClick={handleAgregar}
+            >
+              <Plus className="size-4 sm:size-4.5" />
+              Agregar productos
+            </Button>
+          )}
+        </div>
       )
     }
+
     return (
-      <div className="grid grid-cols-[1fr_auto] gap-1.5">
-        <Button
-          className={`${alto} gap-1.5 font-bold shadow-sm`}
-          onClick={(e) => {
-            e.stopPropagation()
-            setDetalleId(null)
-            setCobrar({ id: o.id, total: o.total_centavos })
-          }}
-        >
-          <Banknote className="size-4 sm:size-4.5" />
-          Cobrar
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          className="size-10 sm:size-10.5 text-muted-foreground hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-          aria-label={`Cancelar pedido #${o.id}`}
-          title="Cancelar pedido"
-          onClick={(e) => {
-            e.stopPropagation()
-            setCancelarId(o.id)
-          }}
-        >
-          <XCircle className="size-4 sm:size-4.5" />
-        </Button>
+      <div className="space-y-1.5">
+        <div className={cn("grid items-center", puedeCancelar ? "grid-cols-[1fr_auto] gap-3 sm:gap-4" : "grid-cols-1")}>
+          <Button
+            className={`${alto} min-h-[44px] gap-1.5 font-bold shadow-sm`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setDetalleId(null)
+              setCobrar({
+                id: o.id,
+                total: o.pendiente_centavos,
+                cliente: o.cliente_nombre,
+                abonado: o.abonado_centavos,
+              })
+            }}
+          >
+            <Banknote className="size-4 sm:size-4.5" />
+            Cobrar
+          </Button>
+          {puedeCancelar && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-11 min-h-[44px] min-w-[44px] text-muted-foreground hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive shrink-0"
+              aria-label={`Cancelar pedido #${o.id}`}
+              title="Cancelar pedido"
+              onClick={(e) => {
+                e.stopPropagation()
+                setCancelarId(o.id)
+              }}
+            >
+              <XCircle className="size-4 sm:size-4.5" />
+            </Button>
+          )}
+        </div>
+        {puedeAgregar && (
+          <Button
+            variant="outline"
+            className={`${alto} min-h-[44px] w-full gap-1.5 font-medium`}
+            onClick={handleAgregar}
+          >
+            <Plus className="size-4 sm:size-4.5" />
+            Agregar productos
+          </Button>
+        )}
       </div>
     )
   }
+
+  const cancelarOrden = data.find((o) => o.id === cancelarId)
 
   return (
     <div className="p-3 sm:p-4 lg:p-6 pb-20 lg:pb-6">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {data.map((o) => {
-          const pagado = o.estado_pago === "pagado"
+          const pagado = o.estado_pago === "pagado" && o.pendiente_centavos === 0
+          const tieneAbono = o.abonado_centavos > 0
           const MAX_ITEMS = 3
           const itemsToShow = o.items.slice(0, MAX_ITEMS)
           const extraItems = o.items.length - MAX_ITEMS
@@ -175,30 +232,25 @@ export default function PorCobrar() {
           return (
             <div
               key={o.id}
-              role="button"
-              tabIndex={0}
-              aria-label={`Ver detalle del pedido #${o.id}`}
-              onClick={() => setDetalleId(o.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault()
-                  setDetalleId(o.id)
-                }
-              }}
-              className="group animate-page-enter flex cursor-pointer flex-col justify-between rounded-2xl border border-border/80 bg-card p-4 shadow-xs transition-all duration-150 hover:border-primary/50 hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.99]"
+              className="animate-page-enter flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-4 shadow-xs transition-all duration-150 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5"
             >
               <div>
                 <div className="flex items-start justify-between gap-2 border-b border-border/50 pb-2.5">
-                  <div>
-                    <span className="font-heading text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                      Pedido #{o.id}
+                  <button
+                    type="button"
+                    onClick={() => setDetalleId(o.id)}
+                    className="min-w-0 flex-1 text-left group/title outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg -m-1 p-1 hover:text-primary transition-colors"
+                    aria-label={`Ver detalle del pedido #${o.id}`}
+                  >
+                    <span className="font-heading text-lg sm:text-xl font-bold tracking-tight text-foreground line-clamp-1 group-hover/title:text-primary">
+                      Pedido #{o.id}{o.cliente_nombre ? ` · ${o.cliente_nombre}` : ""}
                     </span>
                     <div className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Clock className="size-3" />
+                      <Clock className="size-3 shrink-0" />
                       <span>{formatRelativo(o.creada_en, ahora)}</span>
                     </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
+                  </button>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
                     <Badge variant={pagado ? "secondary" : "destructive"} className="text-[10px] px-2 py-0.5">
                       {pagado ? "Pagado" : "Por cobrar"}
                     </Badge>
@@ -210,11 +262,16 @@ export default function PorCobrar() {
 
                 <div className="py-2.5">
                   <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    {pagado ? "Total pagado" : "Total a cobrar"}
+                    {pagado ? "Total pagado" : tieneAbono ? "Falta por cobrar" : "Total a cobrar"}
                   </span>
                   <p className="font-heading text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
-                    {pesos(o.total_centavos)}
+                    {pesos(pagado ? o.total_centavos : o.pendiente_centavos)}
                   </p>
+                  {!pagado && tieneAbono && (
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      Ya abonó {pesos(o.abonado_centavos)} · Total {pesos(o.total_centavos)}
+                    </p>
+                  )}
                 </div>
 
                 <ul className="space-y-1.5 border-t border-border/40 pt-2 text-xs">
@@ -240,6 +297,16 @@ export default function PorCobrar() {
                     </li>
                   )}
                 </ul>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2.5 min-h-[44px] h-11 sm:h-9 w-full text-xs font-semibold text-primary/90 hover:text-primary hover:bg-primary/10 rounded-lg justify-center"
+                  onClick={() => setDetalleId(o.id)}
+                >
+                  Ver detalle
+                </Button>
               </div>
 
               <div className="mt-4 border-t border-border/50 pt-2.5">{renderAcciones(o)}</div>
@@ -254,21 +321,27 @@ export default function PorCobrar() {
           <DialogContent className="max-h-[90dvh] max-w-lg gap-0 overflow-y-auto p-0">
             <DialogHeader className="border-b p-4 sm:p-5">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <DialogTitle className="font-heading text-2xl sm:text-3xl font-bold">
-                    Pedido #{detalle.id}
+                <div className="min-w-0 flex-1">
+                  <DialogTitle className="font-heading text-2xl sm:text-3xl font-bold leading-tight">
+                    Pedido #{detalle.id}{detalle.cliente_nombre ? ` · ${detalle.cliente_nombre}` : ""}
                   </DialogTitle>
                   <DialogDescription className="mt-0.5 flex items-center gap-1.5 text-xs sm:text-sm">
-                    <Clock className="size-3.5" />
+                    <Clock className="size-3.5 shrink-0" />
                     {formatRelativo(detalle.creada_en, ahora)}
                   </DialogDescription>
                 </div>
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex flex-col items-end gap-1 shrink-0">
                   <Badge
-                    variant={detalle.estado_pago === "pagado" ? "secondary" : "destructive"}
+                    variant={
+                      detalle.estado_pago === "pagado" && detalle.pendiente_centavos === 0
+                        ? "secondary"
+                        : "destructive"
+                    }
                     className="px-2.5 py-0.5 text-xs"
                   >
-                    {detalle.estado_pago === "pagado" ? "Pagado · falta entregar" : "Por cobrar"}
+                    {detalle.estado_pago === "pagado" && detalle.pendiente_centavos === 0
+                      ? "Pagado · falta entregar"
+                      : "Por cobrar"}
                   </Badge>
                   <Badge variant="outline" className="px-2.5 py-0.5 text-xs">
                     {tipoLabel(detalle.tipo)}
@@ -280,11 +353,25 @@ export default function PorCobrar() {
             <div className="space-y-4 p-4 sm:p-5">
               <div className="rounded-2xl bg-primary/10 p-3 sm:p-4 text-center">
                 <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  {detalle.estado_pago === "pagado" ? "Total pagado" : "Total a cobrar"}
+                  {detalle.estado_pago === "pagado" && detalle.pendiente_centavos === 0
+                    ? "Total pagado"
+                    : detalle.abonado_centavos > 0
+                    ? "Falta por cobrar"
+                    : "Total a cobrar"}
                 </p>
                 <p className="font-heading text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums mt-0.5">
-                  {pesos(detalle.total_centavos)}
+                  {pesos(
+                    detalle.estado_pago === "pagado" && detalle.pendiente_centavos === 0
+                      ? detalle.total_centavos
+                      : detalle.pendiente_centavos
+                  )}
                 </p>
+                {!(detalle.estado_pago === "pagado" && detalle.pendiente_centavos === 0) &&
+                  detalle.abonado_centavos > 0 && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Ya abonó {pesos(detalle.abonado_centavos)} · Total {pesos(detalle.total_centavos)}
+                    </p>
+                  )}
               </div>
 
               <ul className="space-y-3">
@@ -352,7 +439,8 @@ export default function PorCobrar() {
               </div>
               <DialogHeader className="gap-1">
                 <DialogTitle className="text-center font-heading text-lg sm:text-xl font-bold">
-                  ¿Cancelar el Pedido #{cancelarId}?
+                  ¿Cancelar el Pedido #{cancelarId}
+                  {cancelarOrden?.cliente_nombre ? ` · ${cancelarOrden.cliente_nombre}` : ""}?
                 </DialogTitle>
                 <DialogDescription className="text-center text-xs sm:text-sm text-muted-foreground">
                   Esta acción anulará el pedido y no se podrá recuperar. ¿Estás seguro de continuar?

@@ -175,10 +175,24 @@
   animation: scaleCheck 350ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+@keyframes progressShrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.animate-progress-4s {
+  animation: progressShrink 4000ms linear forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-page-enter,
   .animate-pulse-subtle,
-  .animate-check {
+  .animate-check,
+  .animate-progress-4s {
     animation: none !important;
     transform: none !important;
   }

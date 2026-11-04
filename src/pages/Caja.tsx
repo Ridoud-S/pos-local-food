@@ -1,23 +1,63 @@
 import { useState } from "react"
 import { AlertCircle, Plus } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import Cart from "@/components/Cart"
 import ProductSheet from "@/components/ProductSheet"
 import { pesos } from "@/lib/format"
 import { useMenu } from "@/lib/queries"
 import type { Producto } from "@/lib/types"
+import { useCart } from "@/store/cart"
 import { cn } from "@/lib/utils"
 
 export default function Caja() {
   const menu = useMenu()
+  const { editando, cancelarEdicion, add } = useCart()
   const [catId, setCatId] = useState<number | null>(null)
   const [producto, setProducto] = useState<Producto | null>(null)
+  const [animatingId, setAnimatingId] = useState<number | null>(null)
+
+  function handleProductClick(p: Producto) {
+    if (p.grupos.length === 0) {
+      add({ producto: p, cantidad: 1, opciones: [], nota: "" })
+      toast.success(`${p.nombre} agregado`, { duration: 1500 })
+      setAnimatingId(p.id)
+      setTimeout(() => {
+        setAnimatingId((cur) => (cur === p.id ? null : cur))
+      }, 300)
+      return
+    }
+    setProducto(p)
+  }
 
   const categorias = menu.data ?? []
   const cat = categorias.find((c) => c.id === catId) ?? categorias[0]
 
   return (
     <div className="flex h-full flex-col p-2.5 sm:p-3 lg:p-4 xl:p-5">
+      {/* Banner de edición de pedido si está activo */}
+      {editando && (
+        <div className="mb-2.5 sm:mb-3 flex items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/10 px-3.5 sm:px-4 py-2 sm:py-2.5 shadow-xs animate-page-enter">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-primary/20 text-primary shrink-0">
+              <Plus className="size-4 stroke-[2.5]" />
+            </div>
+            <p className="font-heading font-bold text-xs sm:text-sm text-foreground truncate">
+              Agregando al pedido #{editando.id}
+              {editando.cliente ? ` · ${editando.cliente}` : ""}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0 text-xs font-semibold hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+            onClick={cancelarEdicion}
+          >
+            Cancelar edición
+          </Button>
+        </div>
+      )}
+
       {menu.isLoading ? (
         <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px]">
           {/* Skeleton Categories & Products */}
@@ -94,8 +134,11 @@ export default function Caja() {
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => setProducto(p)}
-                    className="group relative flex min-h-28 sm:min-h-32 flex-col justify-between rounded-2xl border border-border/80 bg-card p-3 sm:p-3.5 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-md hover:shadow-primary/5 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary outline-none"
+                    onClick={() => handleProductClick(p)}
+                    className={cn(
+                      "group relative flex min-h-28 sm:min-h-32 flex-col justify-between rounded-2xl border border-border/80 bg-card p-3 sm:p-3.5 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-md hover:shadow-primary/5 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-primary outline-none",
+                      animatingId === p.id && "scale-[1.02] border-primary ring-2 ring-primary/40 shadow-md shadow-primary/10 transition-transform"
+                    )}
                   >
                     <span className="font-semibold text-foreground text-xs sm:text-sm leading-snug line-clamp-2">
                       {p.nombre}
