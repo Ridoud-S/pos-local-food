@@ -40,6 +40,8 @@ export type Orden = {
     creada_en: string
     tipo: "local" | "llevar" | "domicilio"
     total_centavos: number
+    abonado_centavos: number
+    pendiente_centavos: number
     estado_pago: "pendiente" | "pagado" | "cancelado"
     estado_cocina: "pendiente" | "en_preparacion" | "lista" | "en_camino" | "entregada"
     nota: string | null

@@ -1,8 +1,10 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react"
+import { Copy, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   Sheet,
   SheetContent,
@@ -13,16 +15,80 @@ import PayDialog from "@/components/PayDialog"
 import { api } from "@/lib/api"
 import { pesos } from "@/lib/format"
 import { precioUnit, totalCarrito, useCart, type Linea } from "@/store/cart"
+import { cn } from "@/lib/utils"
 
 type Creada = { id: number; total_centavos: number }
+
+type ItemsResp = {
+  id?: number
+  pendiente_centavos: number
+  total_centavos?: number
+  abonado_centavos?: number
+  cliente_nombre?: string | null
+}
+
+function ClearCartButton({ onClear }: { onClear: () => void }) {
+  const [confirmando, setConfirmando] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  function handleClick() {
+    if (confirmando) {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      setConfirmando(false)
+      onClear()
+    } else {
+      setConfirmando(true)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => {
+        setConfirmando(false)
+      }, 3000)
+    }
+  }
+
+  if (confirmando) {
+    return (
+      <Button
+        type="button"
+        variant="destructive"
+        size="sm"
+        className="h-8 min-h-[36px] px-2.5 text-xs font-bold animate-page-enter"
+        onClick={handleClick}
+        aria-label="Confirmar vaciar pedido"
+      >
+        ¿Vaciar?
+      </Button>
+    )
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-8 min-h-[36px] min-w-[36px] rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+      onClick={handleClick}
+      title="Vaciar pedido"
+      aria-label="Vaciar pedido"
+    >
+      <Trash2 className="size-4" />
+    </Button>
+  )
+}
 
 type ItemsListProps = {
   lineas: Linea[]
   onSetCantidad: (key: string, n: number) => void
   onRemove: (key: string) => void
+  onDuplicar: (key: string) => void
 }
 
-function CartItemsList({ lineas, onSetCantidad, onRemove }: ItemsListProps) {
+function CartItemsList({ lineas, onSetCantidad, onRemove, onDuplicar }: ItemsListProps) {
   return (
     <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 sm:p-4">
       {lineas.length === 0 ? (
@@ -70,6 +136,7 @@ function CartItemsList({ lineas, onSetCantidad, onRemove }: ItemsListProps) {
                   size="icon"
                   className="size-7.5 rounded-md"
                   aria-label={`Reducir cantidad de ${l.producto.nombre}`}
+                  disabled={l.cantidad <= 1}
                   onClick={() => onSetCantidad(l.key, l.cantidad - 1)}
                 >
                   <Minus className="size-3.5" />
@@ -88,15 +155,29 @@ function CartItemsList({ lineas, onSetCantidad, onRemove }: ItemsListProps) {
                 </Button>
               </div>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                aria-label={`Quitar ${l.producto.nombre} del pedido`}
-                onClick={() => onRemove(l.key)}
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7.5 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/80 gap-1 rounded-md"
+                  title="Duplicar producto"
+                  aria-label={`Duplicar ${l.producto.nombre}`}
+                  onClick={() => onDuplicar(l.key)}
+                >
+                  <Copy className="size-3.5" />
+                  <span>Duplicar</span>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  aria-label={`Quitar ${l.producto.nombre} del pedido`}
+                  onClick={() => onRemove(l.key)}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </div>
             </div>
           </div>
         ))
@@ -108,25 +189,82 @@ function CartItemsList({ lineas, onSetCantidad, onRemove }: ItemsListProps) {
 type FooterProps = {
   hasItems: boolean
   total: number
+  tipo: "local" | "llevar"
+  onSetTipo: (t: "local" | "llevar") => void
   isPending: boolean
   isPendingCrearYa: boolean
+  isPendingAgregar: boolean
+  isPendingAgregarYCobrar: boolean
+  editando: { id: number; cliente: string | null } | null
+  cliente: string
+  onSetCliente: (c: string) => void
   onCrear: (cobrarYa: boolean) => void
-  onClear: () => void
+  onAgregar: (cobrarYa: boolean) => void
 }
 
 function CartFooter({
   hasItems,
   total,
+  tipo,
+  onSetTipo,
   isPending,
   isPendingCrearYa,
+  isPendingAgregar,
+  isPendingAgregarYCobrar,
+  editando,
+  cliente,
+  onSetCliente,
   onCrear,
-  onClear,
+  onAgregar,
 }: FooterProps) {
   return (
     <div className="space-y-2.5 border-t border-border/80 bg-muted/20 p-3 sm:p-4">
+      {/* Input de apodo del cliente (oculto en modo edición) */}
+      {!editando && (
+        <div className="space-y-1">
+          <Input
+            className="h-10 sm:h-11 bg-card/70 text-base"
+            placeholder="Nombre o apodo del cliente (opcional)"
+            maxLength={100}
+            value={cliente}
+            onChange={(e) => onSetCliente(e.target.value)}
+          />
+        </div>
+      )}
+
+      {/* Control segmentado Tipo de pedido: Para llevar vs Comer aquí (oculto en modo edición) */}
+      {!editando && (
+        <div className="grid grid-cols-2 p-1 gap-1 rounded-xl bg-muted/60 border border-border/70">
+          <button
+            type="button"
+            onClick={() => onSetTipo("llevar")}
+            className={cn(
+              "flex min-h-[44px] items-center justify-center rounded-lg text-xs sm:text-sm font-semibold transition-all active:scale-98 outline-none focus-visible:ring-2 focus-visible:ring-primary",
+              tipo === "llevar"
+                ? "bg-card text-foreground font-bold shadow-xs border border-border/70"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Para llevar
+          </button>
+          <button
+            type="button"
+            onClick={() => onSetTipo("local")}
+            className={cn(
+              "flex min-h-[44px] items-center justify-center rounded-lg text-xs sm:text-sm font-semibold transition-all active:scale-98 outline-none focus-visible:ring-2 focus-visible:ring-primary",
+              tipo === "local"
+                ? "bg-card text-foreground font-bold shadow-xs border border-border/70"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Comer aquí
+          </button>
+        </div>
+      )}
+
       <div className="flex items-baseline justify-between px-1">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Total a pagar
+          {editando ? "Total a agregar" : "Total a pagar"}
         </span>
         <span
           key={total}
@@ -136,38 +274,54 @@ function CartFooter({
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          variant="outline"
-          size="lg"
-          className="h-11 sm:h-12 text-xs sm:text-sm font-semibold"
-          loading={isPending && !isPendingCrearYa}
-          disabled={!hasItems || isPending}
-          onClick={() => onCrear(false)}
-        >
-          Crear pedido
-        </Button>
+      {editando ? (
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant="outline"
+            size="lg"
+            className="min-h-[44px] h-11 sm:h-12 text-xs sm:text-sm font-semibold"
+            loading={isPendingAgregar && !isPendingAgregarYCobrar}
+            disabled={!hasItems || isPendingAgregar}
+            onClick={() => onAgregar(false)}
+          >
+            Agregar al pedido
+          </Button>
 
-        <Button
-          variant="default"
-          size="lg"
-          className="h-11 sm:h-12 text-xs sm:text-sm font-bold"
-          loading={isPending && isPendingCrearYa}
-          disabled={!hasItems || isPending}
-          onClick={() => onCrear(true)}
-        >
-          Crear y cobrar
-        </Button>
-      </div>
+          <Button
+            variant="default"
+            size="lg"
+            className="min-h-[44px] h-11 sm:h-12 text-xs sm:text-sm font-bold shadow-md shadow-primary/20"
+            loading={isPendingAgregar && isPendingAgregarYCobrar}
+            disabled={!hasItems || isPendingAgregar}
+            onClick={() => onAgregar(true)}
+          >
+            Agregar y cobrar
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant="outline"
+            size="lg"
+            className="min-h-[44px] h-11 sm:h-12 text-xs sm:text-sm font-semibold"
+            loading={isPending && !isPendingCrearYa}
+            disabled={!hasItems || isPending}
+            onClick={() => onCrear(false)}
+          >
+            Crear pedido
+          </Button>
 
-      {hasItems && (
-        <Button
-          variant="ghost"
-          className="h-7 w-full text-[11px] text-muted-foreground hover:text-destructive hover:bg-transparent"
-          onClick={onClear}
-        >
-          Vaciar pedido
-        </Button>
+          <Button
+            variant="default"
+            size="lg"
+            className="min-h-[44px] h-11 sm:h-12 text-xs sm:text-sm font-bold"
+            loading={isPending && isPendingCrearYa}
+            disabled={!hasItems || isPending}
+            onClick={() => onCrear(true)}
+          >
+            Crear y cobrar
+          </Button>
+        </div>
       )}
     </div>
   )
@@ -175,8 +329,26 @@ function CartFooter({
 
 export default function Cart() {
   const qc = useQueryClient()
-  const { lineas, setCantidad, remove, clear } = useCart()
-  const [cobrar, setCobrar] = useState<{ id: number; total: number } | null>(null)
+  const navigate = useNavigate()
+  const {
+    lineas,
+    cliente,
+    tipo,
+    editando,
+    setCantidad,
+    duplicar,
+    remove,
+    clear,
+    setCliente,
+    setTipo,
+    cancelarEdicion,
+  } = useCart()
+  const [cobrar, setCobrar] = useState<{
+    id: number
+    total: number
+    cliente?: string | null
+    abonado?: number
+  } | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const total = totalCarrito(lineas)
   const totalArticulos = lineas.reduce((acc, l) => acc + l.cantidad, 0)
@@ -184,7 +356,49 @@ export default function Cart() {
   const crear = useMutation({
     mutationFn: (_cobrarYa: boolean) => {
       void _cobrarYa
+      const clienteTrim = cliente.trim()
       return api<Creada>("/orders", {
+        method: "POST",
+        json: {
+          tipo,
+          items: lineas.map((l) => ({
+            producto_id: l.producto.id,
+            cantidad: l.cantidad,
+            opciones: l.opciones.map((o) => o.id),
+            nota: l.nota || undefined,
+          })),
+          ...(clienteTrim ? { cliente_nombre: clienteTrim } : {}),
+        },
+      })
+    },
+    onSuccess: (r, cobrarYa) => {
+      const clienteTrim = cliente.trim()
+      clear()
+      setMobileOpen(false)
+      if (cobrarYa) {
+        setCobrar({
+          id: r.id,
+          total: r.total_centavos,
+          cliente: clienteTrim || null,
+          abonado: 0,
+        })
+      } else {
+        qc.invalidateQueries({ queryKey: ["orders"] })
+        qc.invalidateQueries({ queryKey: ["stats"] })
+        toast.success(
+          clienteTrim
+            ? `Pedido #${r.id} · ${clienteTrim} creado`
+            : `Pedido #${r.id} creado`
+        )
+      }
+    },
+    onError: (e) => toast.error(e.message),
+  })
+
+  const agregar = useMutation({
+    mutationFn: (cobrarYa: boolean) => {
+      if (!editando) throw new Error("No hay pedido en edición")
+      return api<ItemsResp>(`/orders/${editando.id}/items`, {
         method: "POST",
         json: {
           items: lineas.map((l) => ({
@@ -194,16 +408,27 @@ export default function Cart() {
             nota: l.nota || undefined,
           })),
         },
-      })
+      }).then((r) => ({ r, cobrarYa }))
     },
-    onSuccess: (r, cobrarYa) => {
+    onSuccess: ({ r, cobrarYa }) => {
+      const pedidoId = editando?.id ?? r.id ?? 0
+      const clienteNombre = editando?.cliente ?? r.cliente_nombre
       clear()
+      cancelarEdicion()
       setMobileOpen(false)
+      qc.invalidateQueries({ queryKey: ["orders"] })
+      qc.invalidateQueries({ queryKey: ["stats"] })
+
       if (cobrarYa) {
-        setCobrar({ id: r.id, total: r.total_centavos })
+        setCobrar({
+          id: pedidoId,
+          total: r.pendiente_centavos,
+          cliente: clienteNombre,
+          abonado: r.abonado_centavos ?? 0,
+        })
       } else {
-        qc.invalidateQueries({ queryKey: ["orders"] })
-        toast.success(`Pedido #${r.id} creado`)
+        toast.success(`Se agregó a pedido #${pedidoId}`)
+        navigate("/pedidos")
       }
     },
     onError: (e) => toast.error(e.message),
@@ -218,28 +443,41 @@ export default function Cart() {
           <div className="flex items-center gap-2">
             <ShoppingBag className="size-4.5 text-primary" />
             <h2 className="font-heading text-base font-bold tracking-tight text-foreground">
-              Pedido actual
+              {editando ? `Pedido #${editando.id}` : "Pedido actual"}
             </h2>
           </div>
-          {lineas.length > 0 && (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary tabular-nums">
-              {totalArticulos} {totalArticulos === 1 ? "artículo" : "artículos"}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {lineas.length > 0 && (
+              <>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary tabular-nums">
+                  {totalArticulos} {totalArticulos === 1 ? "artículo" : "artículos"}
+                </span>
+                <ClearCartButton onClear={clear} />
+              </>
+            )}
+          </div>
         </div>
 
         <CartItemsList
           lineas={lineas}
           onSetCantidad={setCantidad}
           onRemove={remove}
+          onDuplicar={duplicar}
         />
         <CartFooter
           hasItems={lineas.length > 0}
           total={total}
+          tipo={tipo}
+          onSetTipo={setTipo}
           isPending={crear.isPending}
           isPendingCrearYa={!!crear.variables}
+          isPendingAgregar={agregar.isPending}
+          isPendingAgregarYCobrar={agregar.variables === true}
+          editando={editando}
+          cliente={cliente}
+          onSetCliente={setCliente}
           onCrear={(cobrarYa) => crear.mutate(cobrarYa)}
-          onClear={clear}
+          onAgregar={(cobrarYa) => agregar.mutate(cobrarYa)}
         />
       </div>
 
@@ -275,32 +513,45 @@ export default function Cart() {
             <div className="flex items-center gap-2">
               <ShoppingBag className="size-4.5 text-primary" />
               <SheetTitle className="font-heading text-base font-bold tracking-tight text-foreground">
-                Pedido actual ({totalArticulos})
+                {editando
+                  ? `Agregar a pedido #${editando.id} (${totalArticulos})`
+                  : `Pedido actual (${totalArticulos})`}
               </SheetTitle>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 rounded-full text-muted-foreground hover:text-foreground"
-              aria-label="Cerrar pedido"
-              onClick={() => setMobileOpen(false)}
-            >
-              <X className="size-4" />
-            </Button>
+            <div className="flex items-center gap-1.5">
+              {lineas.length > 0 && <ClearCartButton onClear={clear} />}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 rounded-full text-muted-foreground hover:text-foreground"
+                aria-label="Cerrar pedido"
+                onClick={() => setMobileOpen(false)}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
           </SheetHeader>
 
           <CartItemsList
             lineas={lineas}
             onSetCantidad={setCantidad}
             onRemove={remove}
+            onDuplicar={duplicar}
           />
           <CartFooter
             hasItems={lineas.length > 0}
             total={total}
+            tipo={tipo}
+            onSetTipo={setTipo}
             isPending={crear.isPending}
             isPendingCrearYa={!!crear.variables}
+            isPendingAgregar={agregar.isPending}
+            isPendingAgregarYCobrar={agregar.variables === true}
+            editando={editando}
+            cliente={cliente}
+            onSetCliente={setCliente}
             onCrear={(cobrarYa) => crear.mutate(cobrarYa)}
-            onClear={clear}
+            onAgregar={(cobrarYa) => agregar.mutate(cobrarYa)}
           />
         </SheetContent>
       </Sheet>

@@ -16,6 +16,37 @@ import type { Grupo, Opcion, Producto } from "@/lib/types"
 import { useCart } from "@/store/cart"
 import { cn } from "@/lib/utils"
 
+const NOTAS_RAPIDAS = [
+  "Sin cebolla",
+  "Sin verdura",
+  "Sin salsa",
+  "Salsa aparte",
+  "Bien dorado",
+] as const
+
+function parseNotas(texto: string): string[] {
+  return texto
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+function isChipActivo(chip: string, texto: string): boolean {
+  const partes = parseNotas(texto)
+  return partes.some((p) => p.toLowerCase() === chip.toLowerCase())
+}
+
+function toggleChip(chip: string, texto: string): string {
+  const partes = parseNotas(texto)
+  const idx = partes.findIndex((p) => p.toLowerCase() === chip.toLowerCase())
+  if (idx !== -1) {
+    partes.splice(idx, 1)
+  } else {
+    partes.push(chip)
+  }
+  return partes.join(", ")
+}
+
 type Props = { producto: Producto; onClose: () => void }
 
 export default function ProductSheet({ producto, onClose }: Props) {
@@ -149,6 +180,27 @@ export default function ProductSheet({ producto, onClose }: Props) {
               value={nota}
               onChange={(e) => setNota(e.target.value)}
             />
+            {/* Chips de notas rápidas */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {NOTAS_RAPIDAS.map((chip) => {
+                const activo = isChipActivo(chip, nota)
+                return (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setNota(toggleChip(chip, nota))}
+                    className={cn(
+                      "flex min-h-[44px] items-center justify-center rounded-xl border px-3.5 text-xs sm:text-sm font-semibold transition-all active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                      activo
+                        ? "border-primary bg-primary text-primary-foreground shadow-xs shadow-primary/20"
+                        : "border-border/80 bg-card text-foreground hover:bg-muted/70 hover:border-primary/40"
+                    )}
+                  >
+                    {chip}
+                  </button>
+                )
+              })}
+            </div>
           </section>
         </div>
 
