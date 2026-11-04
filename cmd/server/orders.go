@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -31,10 +32,23 @@ type badRequest string
 
 func (e badRequest) Error() string { return string(e) }
 
+// POST /api/orders
 func (a *App) createOrder(c *gin.Context) {
 	var req orderReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+	if !bindJSON(c, &req) {
+		return
+	}
+
+	if req.Tipo == "" {
+		req.Tipo = "local"
+	}
+	req.ClienteNombre = strings.TrimSpace(req.ClienteNombre)
+	req.ClienteTelefono = strings.TrimSpace(req.ClienteTelefono)
+	req.Direccion = strings.TrimSpace(req.Direccion)
+	req.Referencias = strings.TrimSpace(req.Referencias)
+
+	if req.Tipo == "domicilio" && (req.Direccion == "" || req.ClienteTelefono == "") {
+		c.JSON(400, gin.H{"error": "un domicilio necesita dirección y teléfono"})
 		return
 	}
 
@@ -46,16 +60,30 @@ func (a *App) createOrder(c *gin.Context) {
 	}
 	defer tx.Rollback(ctx)
 
+	// Costo de envío: solo aplica a domicilios y sale de la tabla ajustes
+	envio := 0
+	if req.Tipo == "domicilio" {
+		if err := tx.QueryRow(ctx,
+			`SELECT valor::int FROM ajustes WHERE clave = 'envio_centavos'`).Scan(&envio); err != nil {
+			fail(c, err)
+			return
+		}
+	}
+
 	var ordenID int
-	err = tx.QueryRow(ctx,
-		`INSERT INTO ordenes (total_centavos, nota) VALUES (0, NULLIF($1, '')) RETURNING id`,
-		req.Nota).Scan(&ordenID)
+	err = tx.QueryRow(ctx, `
+		INSERT INTO ordenes (total_centavos, nota, tipo, cliente_nombre, cliente_telefono,
+		                     direccion, referencias, envio_centavos)
+		VALUES (0, NULLIF($1,''), $2, NULLIF($3,''), NULLIF($4,''), NULLIF($5,''), NULLIF($6,''), $7)
+		RETURNING id`,
+		req.Nota, req.Tipo, req.ClienteNombre, req.ClienteTelefono,
+		req.Direccion, req.Referencias, envio).Scan(&ordenID)
 	if err != nil {
 		fail(c, err)
 		return
 	}
 
-	total := 0
+	total := envio
 	for _, it := range req.Items {
 		sub, err := addItem(ctx, tx, ordenID, it)
 		if err != nil {
@@ -80,7 +108,96 @@ func (a *App) createOrder(c *gin.Context) {
 		return
 	}
 
-	c.JSON(201, gin.H{"id": ordenID, "total_centavos": total})
+	c.JSON(201, gin.H{
+		"id":             ordenID,
+		"tipo":           req.Tipo,
+		"envio_centavos": envio,
+		"total_centavos": total,
+	})
+}
+
+type addItemsReq struct {
+	Items []itemReq `json:"items" binding:"required,min=1,max=50,dive"`
+}
+
+// POST /api/orders/:id/items
+// Agrega productos a un pedido existente. Si ya estaba pagado y el nuevo total
+// supera lo abonado, vuelve a 'pendiente' y solo se cobra la diferencia.
+func (a *App) addOrderItems(c *gin.Context) {
+	id, ok := idParam(c, "id")
+	if !ok {
+		return
+	}
+	var req addItemsReq
+	if !bindJSON(c, &req) {
+		return
+	}
+
+	ctx := c.Request.Context()
+	tx, err := a.db.Begin(ctx)
+	if err != nil {
+		fail(c, err)
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	var total, abonado int
+	var pago, cocina string
+	err = tx.QueryRow(ctx, `
+		SELECT total_centavos, abonado_centavos, estado_pago, estado_cocina
+		FROM ordenes WHERE id = $1 FOR UPDATE`, id).Scan(&total, &abonado, &pago, &cocina)
+	if errors.Is(err, pgx.ErrNoRows) {
+		c.JSON(404, gin.H{"error": "la orden no existe"})
+		return
+	}
+	if err != nil {
+		fail(c, err)
+		return
+	}
+	if pago == "cancelado" {
+		c.JSON(409, gin.H{"error": "la orden está cancelada"})
+		return
+	}
+	if cocina == "entregada" {
+		c.JSON(409, gin.H{"error": "la orden ya fue entregada, crea un pedido nuevo"})
+		return
+	}
+
+	extra := 0
+	for _, it := range req.Items {
+		sub, err := addItem(ctx, tx, id, it)
+		if err != nil {
+			var br badRequest
+			if errors.As(err, &br) {
+				c.JSON(400, gin.H{"error": br.Error()})
+				return
+			}
+			fail(c, err)
+			return
+		}
+		extra += sub
+	}
+
+	nuevoTotal := total + extra
+	if _, err := tx.Exec(ctx, `
+		UPDATE ordenes
+		SET total_centavos = $1,
+		    estado_pago = CASE WHEN $1 > abonado_centavos THEN 'pendiente' ELSE estado_pago END
+		WHERE id = $2`, nuevoTotal, id); err != nil {
+		fail(c, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		fail(c, err)
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"id":                 id,
+		"total_centavos":     nuevoTotal,
+		"abonado_centavos":   abonado,
+		"pendiente_centavos": nuevoTotal - abonado,
+	})
 }
 
 func addItem(ctx context.Context, tx pgx.Tx, ordenID int, it itemReq) (int, error) {
@@ -128,9 +245,10 @@ func addItem(ctx context.Context, tx pgx.Tx, ordenID int, it itemReq) (int, erro
 
 	// Opciones elegidas
 	type seleccion struct {
-		id            int
-		grupo, nombre string
-		extra         int
+		id     int
+		grupo  string
+		nombre string
+		extra  int
 	}
 	var sels []seleccion
 	vistas := map[int]bool{}

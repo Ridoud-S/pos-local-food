@@ -113,6 +113,7 @@ func main() {
 
 	priv.GET("/stats/dias", app.statsDias)
 	priv.GET("/stats/top", app.statsTop)
+	priv.POST("/orders/:id/items", app.addOrderItems)
 
 	app.registerAdmin(priv)
 

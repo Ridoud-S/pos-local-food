@@ -26,8 +26,8 @@ func (a *App) statsDias(c *gin.Context) {
 	rows, err := a.db.Query(c.Request.Context(), `
 		SELECT to_char((creada_en AT TIME ZONE 'America/Mexico_City')::date, 'YYYY-MM-DD') AS dia,
 		       COUNT(*)::int,
-		       COALESCE(SUM(total_centavos) FILTER (WHERE estado_pago = 'pagado'), 0)::int,
-		       COALESCE(SUM(total_centavos) FILTER (WHERE estado_pago = 'pendiente'), 0)::int
+		       COALESCE(SUM(abonado_centavos), 0)::int,
+		       COALESCE(SUM(total_centavos - abonado_centavos) FILTER (WHERE estado_pago = 'pendiente'), 0)::int
 		FROM ordenes
 		WHERE estado_pago <> 'cancelado'
 		  AND creada_en >= now() - make_interval(days => $1::int)
