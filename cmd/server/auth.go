@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/time/rate"
 )
@@ -116,10 +119,10 @@ func (a *App) login(c *gin.Context) {
 	}
 
 	var id int
-	var hash, rol string
+	var hash, rol, nombre string
 	err := a.db.QueryRow(c.Request.Context(),
-		`SELECT id, password_hash, rol FROM usuarios WHERE usuario = $1 AND activo`, req.Usuario).
-		Scan(&id, &hash, &rol)
+		`SELECT id, usuario, password_hash, rol FROM usuarios WHERE lower(usuario) = lower($1) AND activo`, strings.TrimSpace(req.Usuario)).
+		Scan(&id, &nombre, &hash, &rol)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.Password)) != nil {
 		c.JSON(401, gin.H{"error": "usuario o contraseña incorrectos"})
 		return
@@ -148,7 +151,9 @@ func (a *App) logout(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// Middleware: el admin siempre pasa; los demás solo si su rol está en la lista
+// Middleware: valida el token y consulta la base, así que desactivar, eliminar
+// o cambiar de rol a un usuario surte efecto al instante.
+// El admin siempre pasa; los demás solo si su rol está en la lista.
 func (a *App) auth(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		raw, err := c.Cookie(cookieName)
@@ -164,9 +169,27 @@ func (a *App) auth(roles ...string) gin.HandlerFunc {
 			c.AbortWithStatusJSON(401, gin.H{"error": "sesión inválida o expirada"})
 			return
 		}
-		allowed := cl.Rol == "admin"
+
+		var uid int
+		var rol string
+		var activo bool
+		err = a.db.QueryRow(c.Request.Context(),
+			`SELECT id, rol, activo FROM usuarios WHERE lower(usuario) = lower($1)`, cl.Subject).
+			Scan(&uid, &rol, &activo)
+		if errors.Is(err, pgx.ErrNoRows) || (err == nil && !activo) {
+			c.SetCookie(cookieName, "", -1, "/", "", cookieSecure(), true)
+			c.AbortWithStatusJSON(401, gin.H{"error": "la cuenta ya no está disponible"})
+			return
+		}
+		if err != nil {
+			log.Printf("auth: %v", err)
+			c.AbortWithStatusJSON(500, gin.H{"error": "error interno"})
+			return
+		}
+
+		allowed := rol == "admin"
 		for _, r := range roles {
-			if r == cl.Rol {
+			if r == rol {
 				allowed = true
 			}
 		}
@@ -174,8 +197,9 @@ func (a *App) auth(roles ...string) gin.HandlerFunc {
 			c.AbortWithStatusJSON(403, gin.H{"error": "sin permiso"})
 			return
 		}
+		c.Set("uid", uid)
 		c.Set("usuario", cl.Subject)
-		c.Set("rol", cl.Rol)
+		c.Set("rol", rol)
 		c.Next()
 	}
 }

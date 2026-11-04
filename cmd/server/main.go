@@ -99,23 +99,29 @@ func main() {
 	api.GET("/health", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 	api.POST("/auth/login", app.login)
 	api.POST("/auth/logout", app.logout)
+	// admin siempre pasa; el rol "caja" y "cocina" solo donde se indica
+	lectura := api.Group("", app.auth("caja", "cocina")) // caja y cocina
+	caja := api.Group("", app.auth("caja"))              // caja
+	admin := api.Group("", app.auth())                   // solo admin
 
-	priv := api.Group("", app.auth()) // cualquier usuario autenticado
-	priv.GET("/me", app.me)
-	priv.GET("/menu", app.getMenu)
+	lectura.GET("/me", app.me)
+	lectura.GET("/orders", app.listOrders)
 
-	priv.GET("/orders", app.listOrders)
-	priv.GET("/orders/:id", app.getOrder)
-	priv.POST("/orders", app.createOrder)
-	priv.PATCH("/orders/:id/pagar", app.payOrder)
-	priv.PATCH("/orders/:id/cocina", app.setKitchenState)
-	priv.PATCH("/orders/:id/cancelar", app.cancelOrder)
+	caja.GET("/menu", app.getMenu)
+	caja.GET("/orders/:id", app.getOrder)
+	caja.POST("/orders", app.createOrder)
+	caja.POST("/orders/:id/items", app.addOrderItems)
+	caja.PATCH("/orders/:id/pagar", app.payOrder)
+	caja.PATCH("/orders/:id/cocina", app.setKitchenState)
+	caja.PATCH("/orders/:id/cancelar", app.cancelOrder)
 
-	priv.GET("/stats/dias", app.statsDias)
-	priv.GET("/stats/top", app.statsTop)
-	priv.POST("/orders/:id/items", app.addOrderItems)
-
-	app.registerAdmin(priv)
+	admin.GET("/stats/dias", app.statsDias)
+	admin.GET("/stats/top", app.statsTop)
+	app.registerAdmin(admin)
+	admin.GET("/admin/usuarios", app.listUsuarios)
+	admin.POST("/admin/usuarios", app.createUsuario)
+	admin.PATCH("/admin/usuarios/:id", app.updateUsuario)
+	admin.DELETE("/admin/usuarios/:id", app.deleteUsuario)
 
 	// Frontend (React build o web/) con fallback a index.html para las rutas del SPA
 	dir := staticDir()
