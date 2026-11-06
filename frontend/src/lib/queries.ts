@@ -1,11 +1,18 @@
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
-import type { Categoria, DiaStats, Orden, TopProducto, Usuario } from "@/lib/types"
+import type { AdminCatalogo, Categoria, DiaStats, Orden, TopProducto, Usuario } from "@/lib/types"
 
 export function useMenu() {
     return useQuery({
         queryKey: ["menu"],
         queryFn: () => api<Categoria[]>("/menu"),
+    })
+}
+
+export function useCatalogo() {
+    return useQuery({
+        queryKey: ["catalogo"],
+        queryFn: () => api<AdminCatalogo>("/admin/catalogo"),
     })
 }
 

@@ -74,3 +74,53 @@ export type TopProducto = {
     piezas: number
     ingresos_centavos: number
 }
+
+
+// Tipos para el catálogo de administración
+export type AdminCategoria = {
+    id: number
+    nombre: string
+    orden: number
+    activo: boolean
+}
+
+export type AdminProducto = {
+    id: number
+    categoria_id: number
+    nombre: string
+    precio_centavos: number
+    orden: number
+    activo: boolean
+}
+
+export type AdminGrupo = {
+    id: number
+    nombre: string
+    activo: boolean
+}
+
+export type AdminOpcion = {
+    id: number
+    grupo_id: number
+    nombre: string
+    precio_extra_centavos: number
+    es_default: boolean
+    orden: number
+    activo: boolean
+}
+
+export type AdminProductoGrupo = {
+    producto_id: number
+    grupo_id: number
+    min: number
+    max: number
+    orden: number
+}
+
+export type AdminCatalogo = {
+    categorias: AdminCategoria[]
+    productos: AdminProducto[]
+    grupos: AdminGrupo[]
+    opciones: AdminOpcion[]
+    producto_grupos: AdminProductoGrupo[]
+}

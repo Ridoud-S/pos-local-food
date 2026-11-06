@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"
-import { LogOut, Receipt, ReceiptText, Sparkles, TrendingUp, Users, Utensils } from "lucide-react"
+import { LogOut, Receipt, ReceiptText, Sparkles, TrendingUp, Users, Utensils, UtensilsCrossed } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/ThemeToggle"
@@ -22,6 +22,7 @@ const allLinks: NavItem[] = [
   { to: "/", label: "Caja", icon: ReceiptText, end: true, roles: ["admin", "caja"] },
   { to: "/cuentas", label: "Cuentas", icon: Receipt, end: false, roles: ["admin", "caja"] },
   { to: "/pedidos", label: "Pedidos", icon: Utensils, end: false, roles: ["admin", "caja", "cocina"] },
+  { to: "/menu-admin", label: "Menú", icon: UtensilsCrossed, end: false, roles: ["admin"] },
   { to: "/resumen", label: "Resumen", icon: TrendingUp, end: false, roles: ["admin"] },
   { to: "/usuarios", label: "Usuarios", icon: Users, end: false, roles: ["admin"] },
 ]

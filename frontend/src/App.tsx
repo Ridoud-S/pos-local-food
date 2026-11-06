@@ -8,6 +8,7 @@ import Cuentas from "@/pages/Cuentas"
 import Pedidos from "@/pages/Pedidos"
 import Resumen from "@/pages/Resumen"
 import Usuarios from "@/pages/Usuarios"
+import MenuAdmin from "@/pages/MenuAdmin"
 import type { Rol } from "@/lib/types"
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -90,6 +91,14 @@ export default function App() {
           element={
             <RequireRole roles={["caja", "cocina"]}>
               <Pedidos />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="menu-admin"
+          element={
+            <RequireRole roles={[]}>
+              <MenuAdmin />
             </RequireRole>
           }
         />
