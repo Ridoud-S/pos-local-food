@@ -15,7 +15,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isLoading, isError } = useMe()
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-dvh items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-9 w-9 animate-spin text-primary" />
           <span className="text-xs uppercase tracking-widest font-semibold text-muted-foreground">

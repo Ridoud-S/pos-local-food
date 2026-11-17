@@ -425,7 +425,7 @@ export default function Usuarios() {
 
       {/* Diálogo: Nuevo Usuario (Bottom sheet en móvil) */}
       <Dialog open={creando} onOpenChange={(open) => !open && setCreando(false)}>
-        <DialogContent className="max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-full max-sm:rounded-b-none max-sm:rounded-t-3xl max-sm:border-b-0 max-sm:max-h-[90dvh] max-sm:overflow-y-auto max-sm:p-5 p-6 sm:max-w-lg">
+        <DialogContent className="max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-full max-sm:rounded-b-none max-sm:rounded-t-3xl max-sm:border-b-0 max-sm:max-h-[90dvh] max-sm:overflow-y-auto max-sm:p-5 max-sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))] p-6 sm:max-w-lg">
           <DialogHeader className="border-b border-border/60 pb-3">
             <div className="flex items-center gap-2.5">
               <div className="flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
@@ -572,7 +572,7 @@ export default function Usuarios() {
 
       {/* Diálogo: Editar Usuario (Bottom sheet en móvil) */}
       <Dialog open={!!editando} onOpenChange={(open) => !open && setEditando(null)}>
-        <DialogContent className="max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-full max-sm:rounded-b-none max-sm:rounded-t-3xl max-sm:border-b-0 max-sm:max-h-[90dvh] max-sm:overflow-y-auto max-sm:p-5 p-6 sm:max-w-lg">
+        <DialogContent className="max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-full max-sm:rounded-b-none max-sm:rounded-t-3xl max-sm:border-b-0 max-sm:max-h-[90dvh] max-sm:overflow-y-auto max-sm:p-5 max-sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))] p-6 sm:max-w-lg">
           <DialogHeader className="border-b border-border/60 pb-3">
             <div className="flex items-center gap-2.5">
               <div className="flex size-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
@@ -734,7 +734,7 @@ export default function Usuarios() {
 
       {/* Diálogo: Confirmar Eliminación (Bottom sheet en móvil) */}
       <Dialog open={!!eliminando} onOpenChange={(open) => !open && setEliminando(null)}>
-        <DialogContent className="max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-full max-sm:rounded-b-none max-sm:rounded-t-3xl max-sm:border-b-0 max-sm:max-h-[90dvh] max-sm:overflow-y-auto max-sm:p-5 p-6 sm:max-w-md">
+        <DialogContent className="max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:max-w-full max-sm:rounded-b-none max-sm:rounded-t-3xl max-sm:border-b-0 max-sm:max-h-[90dvh] max-sm:overflow-y-auto max-sm:p-5 max-sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))] p-6 sm:max-w-md">
           <div className="flex flex-col items-center text-center p-1">
             <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-destructive/15 text-destructive">
               <ShieldAlert className="size-6" />

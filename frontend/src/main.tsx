@@ -31,7 +31,7 @@ createRoot(document.getElementById("root")!).render(
       <ThemeProvider>
         <BrowserRouter>
           <App />
-          <Toaster richColors position="top-center" />
+          <Toaster richColors position="top-center" mobileOffset={{ top: "calc(env(safe-area-inset-top) + 12px)" }} />
         </BrowserRouter>
       </ThemeProvider>
     </QueryClientProvider>

@@ -49,7 +49,7 @@ export default function Layout() {
   })
 
   return (
-    <div className="flex h-dvh w-screen overflow-hidden bg-background text-foreground select-none">
+    <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground select-none pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       {/* Sidebar for Desktop / Wide screens (>= lg) */}
       <aside className="hidden lg:flex w-60 xl:w-64 flex-col border-r border-border/80 bg-card/60 backdrop-blur-md">
         {/* Brand Header */}
@@ -148,7 +148,7 @@ export default function Layout() {
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top Header for Mobile/Tablet (< lg) */}
-        <header className="flex lg:hidden h-14 items-center justify-between border-b border-border/70 bg-card/80 px-4 backdrop-blur-md">
+        <header className="flex lg:hidden shrink-0 h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] items-center justify-between border-b border-border/70 bg-card/80 px-3 sm:px-4 backdrop-blur-md">
           <div className="flex items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#E6C75A] to-[#B8902A] text-[#0B0B0C]">
               <Sparkles className="size-4.5" />
@@ -194,8 +194,12 @@ export default function Layout() {
 
         {/* Bottom Navigation Bar for Mobile/Tablet (< lg) */}
         <nav
-          className="fixed bottom-0 left-0 right-0 z-40 flex lg:hidden items-center justify-around border-t border-border/70 bg-card/95 py-2 px-3 backdrop-blur-lg shadow-lg"
-          style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+          className="fixed bottom-0 left-0 right-0 z-40 flex lg:hidden items-center justify-around gap-0.5 border-t border-border/70 bg-card/95 pt-2 backdrop-blur-lg shadow-lg"
+          style={{
+            paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
+            paddingLeft: "max(0.25rem, env(safe-area-inset-left))",
+            paddingRight: "max(0.25rem, env(safe-area-inset-right))",
+          }}
           aria-label="Navegación principal"
         >
           {links.map(({ to, label, icon: Icon, end }) => (
@@ -205,7 +209,7 @@ export default function Layout() {
               end={end}
               className={({ isActive }) =>
                 cn(
-                  "relative flex min-w-16 flex-col items-center justify-center gap-1 rounded-xl py-1.5 px-2.5 transition-all duration-150 active:scale-95",
+                  "relative flex min-w-0 max-w-24 flex-1 flex-col items-center justify-center gap-1 rounded-xl py-1.5 px-1 transition-all duration-150 active:scale-95",
                   isActive
                     ? "text-primary font-bold"
                     : "text-muted-foreground hover:text-foreground"
@@ -222,7 +226,7 @@ export default function Layout() {
                       </span>
                     )}
                   </div>
-                  <span className="text-xs tracking-tight">{label}</span>
+                  <span className="max-w-full truncate text-[11px] sm:text-xs tracking-tight">{label}</span>
                   {isActive && (
                     <span className="absolute -bottom-1 h-1 w-6 rounded-full bg-primary" />
                   )}

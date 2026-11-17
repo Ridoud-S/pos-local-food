@@ -121,11 +121,47 @@
       font-size: 14px;
     }
   }
+  html {
+    /* iOS: evita que el texto se agrande solo al girar el teléfono */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-foreground;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     min-height: 100dvh;
+    /* iOS: quita el recuadro gris al tocar y el "rebote" de la página completa */
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
   }
+  /* iOS Safari: con user-select:none heredado (select-none en el Layout) los
+     campos de texto dejan de recibir foco/teclado. Se re-habilitan aquí. */
+  input,
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
+/* iOS Safari hace zoom automático al enfocar un campo con letra < 16px.
+   Como html usa 14px, text-base = 14px y dispara el zoom. Forzamos 16px en celular. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Paneles inferiores (sheets): que los botones no queden bajo la barra de inicio del iPhone */
+[data-slot="sheet-content"][data-side="bottom"] {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Page and component animation helper classes */
